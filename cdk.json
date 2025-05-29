@@ -15,6 +15,9 @@
     ]
   },
   "context": {
+    "vllm": {
+      "model": "google/medgemma-4b-it"
+    },
     "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
     "@aws-cdk/core:checkSecretUsage": true,
     "@aws-cdk/core:target-partitions": [

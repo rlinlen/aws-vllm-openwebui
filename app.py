@@ -1,28 +1,25 @@
 #!/usr/bin/env python3
 import os
-
 import aws_cdk as cdk
-
-from aws_vllm_openwebui.aws_vllm_openwebui_stack import AwsVllmOpenwebuiStack
-
+from aws_vllm_openwebui.network_stack import VLLMNetworkStack
+from aws_vllm_openwebui.loadbalancer_stack import VLLMLoadBalancerStack
+from aws_vllm_openwebui.service_stack import VLLMServiceStack
 
 app = cdk.App()
-AwsVllmOpenwebuiStack(app, "AwsVllmOpenwebuiStack",
-    # If you don't specify 'env', this stack will be environment-agnostic.
-    # Account/Region-dependent features and context lookups will not work,
-    # but a single synthesized template can be deployed anywhere.
 
-    # Uncomment the next line to specialize this stack for the AWS Account
-    # and Region that are implied by the current CLI configuration.
+# Define environment
+env = cdk.Environment(
+    account=os.environ.get("CDK_DEFAULT_ACCOUNT"),
+    region=os.environ.get("CDK_DEFAULT_REGION")
+)
 
-    #env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
+# Create the stacks with dependencies and environment
+network_stack = VLLMNetworkStack(app, "VLLMNetworkStack", env=env)
+lb_stack = VLLMLoadBalancerStack(app, "VLLMLoadBalancerStack", network_stack, env=env)
+service_stack = VLLMServiceStack(app, "VLLMServiceStack", network_stack, lb_stack, env=env)
 
-    # Uncomment the next line if you know exactly what Account and Region you
-    # want to deploy the stack to. */
-
-    #env=cdk.Environment(account='123456789012', region='us-east-1'),
-
-    # For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html
-    )
+# Add dependencies
+lb_stack.add_dependency(network_stack)
+service_stack.add_dependency(lb_stack)
 
 app.synth()
