@@ -62,9 +62,10 @@ This CDK project deploys a scalable vLLM inference service with OpenWebUI on AWS
    ```
 
 3. After deployment:
-   - The OpenWebUI URL will be displayed in the outputs
+   - The OpenWebUI URL will be displayed in the outputs (both HTTP and HTTPS URLs)
+   - The HTTPS URL uses CloudFront for secure access
    - Wait for the model to download and initialize (this may take several minutes)
-   - Access the OpenWebUI interface using the URL from the outputs
+   - Access the OpenWebUI interface using the HTTPS URL from the outputs
 
 ## Project Structure
 
@@ -103,7 +104,9 @@ This CDK project deploys a scalable vLLM inference service with OpenWebUI on AWS
 ## Security
 
 - Services run in private subnets
-- Only OpenWebUI ALB is internet-facing
+- Only OpenWebUI ALB is internet-facing, but restricted to CloudFront access only
+- CloudFront provides HTTPS access with a valid SSL certificate
+- Custom header authentication between CloudFront and ALB
 - HuggingFace token stored in Secrets Manager
 - Internal communication secured
 - Auto-scaling groups in private subnets
@@ -156,13 +159,40 @@ aws logs describe-log-streams --log-group-name "/aws/ecs/containerinsights/WebUI
 aws logs get-log-events --log-group-name "/aws/ecs/containerinsights/WebUICluster/webui" --log-stream-name "stream-name"
 ```
 
-## Useful Commands
+## Model Initialization
 
+After deployment, the vLLM service will begin downloading and loading the model, which can take 10-15 minutes depending on your internet connection and instance type.
+
+### Initialization Phases:
+1. **Instance Startup**: EC2 instance boots and runs user data script (~2 minutes)
+2. **Model Download**: The model files are downloaded from HuggingFace (~5-10 minutes)
+3. **Model Loading**: The model is loaded into GPU memory (~3-5 minutes)
+4. **Service Ready**: The vLLM API becomes available
+
+During this time, the OpenWebUI interface will be available, but you may see connection errors until the model is ready to use.
+
+### Checking Status:
+You can monitor the initialization process by checking the EC2 instance logs:
+```bash
+# Connect to the EC2 instance
+aws ssm start-session --target i-instanceid
+
+# View the vLLM service logs
+sudo journalctl -u vllm.service -f
+
+# Check if the model is loaded and API is responding
+curl http://localhost:8000/v1/models
+```
+
+When the model is fully loaded, you'll see log messages indicating that the API server is running and the model is ready to serve requests.
+- View logs: Check CloudWatch Logs in AWS Console
+- The Open WebUI will also display the google/medGemma from the dropdown model menu
+
+## Useful commands
 - List stacks: `cdk ls`
 - Deploy changes: `cdk deploy --all`
 - Compare changes: `cdk diff`
 - Destroy stacks: `cdk destroy --all`
-- View logs: Check CloudWatch Logs in AWS Console
 
 ## Cost Considerations
 
