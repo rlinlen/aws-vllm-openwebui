@@ -25,6 +25,7 @@ This CDK project deploys a scalable vLLM inference service with OpenWebUI on AWS
 3. AWS CLI configured with appropriate credentials
 4. HuggingFace account and API token
 5. Docker installed locally for building images
+6. Currently, the cdk supports only the us-east-1 and us-west-2. 
 
 ## Setup
 
@@ -48,6 +49,9 @@ This CDK project deploys a scalable vLLM inference service with OpenWebUI on AWS
          --description "HuggingFace API token for vLLM service" \
          --secret-string "hf_your_token_here"
      ```
+
+4. Accept MedGemma license on Huggingface Model Card (https://huggingface.co/google/medgemma-4b-it)
+![](./img/MedGemmaLicense.png)
 
 ## Deployment
 
@@ -122,41 +126,42 @@ This CDK project deploys a scalable vLLM inference service with OpenWebUI on AWS
 
 To check vLLM service logs on the EC2 instance:
 
-1. Connect to the EC2 instance using SSM Session Manager:
+1. Find the instance id of the EC2 instance from the console.
+
+2. Connect to the EC2 instance using SSM Session Manager:
    ```bash
-   aws ssm start-session --target i-instanceid
+   aws ssm start-session --target <instance-id>
    ```
 
-2. View the vLLM service logs using journalctl:
+3. View the vLLM service logs using journalctl:
    ```bash
    sudo journalctl -u vllm.service -f
    ```
 
-3. Check system logs for GPU-related information:
+4. Check system logs for GPU-related information:
    ```bash
    sudo dmesg | grep -i nvidia
    ```
 
 ### Checking OpenWebUI Logs
 
-To check OpenWebUI logs using CloudWatch Container Insights:
+To check OpenWebUI logs:
 
-1. Open the CloudWatch console in AWS
-2. Navigate to "Insights" > "Container Insights"
-3. Select the ECS cluster "WebUICluster"
-4. View the "Performance monitoring" dashboard
-5. For detailed container logs:
-   - Go to "Log groups" in CloudWatch
-   - Find the log group "/aws/ecs/containerinsights/WebUICluster/webui"
-   - Browse the log streams for specific task instances
+1. Open the Elastic Container Service console in AWS
+2. Select the ECS cluster (name will look like "VLLMServiceStack-WebUICluster*")
+3. Click the Service with the name look like "VLLMServiceStack-WebUIService*"
+4. View the "Logs" Tab
 
 You can also use AWS CLI to fetch the logs:
 ```bash
-# List log streams
-aws logs describe-log-streams --log-group-name "/aws/ecs/containerinsights/WebUICluster/webui"
+# First, find the exact log group name
+aws logs describe-log-groups --log-group-name-prefix "VLLMServiceStack-WebUITaskWebUIContainerLogGroup"
+
+# Then list log streams using the exact name from the output above
+aws logs describe-log-streams --log-group-name "EXACT_LOG_GROUP_NAME"
 
 # Get logs from a specific stream
-aws logs get-log-events --log-group-name "/aws/ecs/containerinsights/WebUICluster/webui" --log-stream-name "stream-name"
+aws logs get-log-events --log-group-name "EXACT_LOG_GROUP_NAME" --log-stream-name "stream-name"
 ```
 
 ## Model Initialization
@@ -189,14 +194,14 @@ When the model is fully loaded, you'll see log messages indicating that the API 
 - The Open WebUI will also display the google/medGemma from the dropdown model menu
 
 ## Useful commands
-- List stacks: `cdk ls`
+
 - Deploy changes: `cdk deploy --all`
 - Compare changes: `cdk diff`
 - Destroy stacks: `cdk destroy --all`
 
 ## Cost Considerations
 
-- g5.xlarge instances for vLLM (GPU instances)
+- g5.xlarge instances for vLLM (GPU instances, major cost)
 - t4g.large instances for OpenWebUI
 - Application Load Balancers
 - Data transfer between services
@@ -205,28 +210,24 @@ When the model is fully loaded, you'll see log messages indicating that the API 
 
 ## Troubleshooting
 
-1. Model initialization issues:
+1. Deployment issues:
+   - In case you find the errors related to "This CDK CLI is not compatible with the CDK library used by your application.", either upgrade your cdk cli version, or use npx to run a specific version without having to upgrade the CDK CLI.
+   e.g. "npx aws-cdk@2.1005.0 bootstrap"
+
+2. Model initialization issues:
    - Check vLLM service logs in CloudWatch
-   - Verify HuggingFace token is correctly set
+   - Verify HuggingFace token is correctly set and the license is accepted
    - Ensure enough storage for model
 
-2. Connection issues:
+3. Connection issues:
    - Verify security group rules
    - Check ALB health checks
    - Validate network configuration
 
-3. Performance issues:
+4. Performance issues:
    - Monitor GPU utilization
    - Check memory usage
    - Verify sticky session configuration
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
 
 ## License
 

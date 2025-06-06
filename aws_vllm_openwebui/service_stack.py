@@ -44,7 +44,8 @@ class VLLMServiceStack(Stack):
 
         # Use AWS Deep Learning AMI with GPU support
         dl_ami = ec2.MachineImage.generic_linux({
-            "us-east-1": "ami-0fcdcdcc9cf0407ae"  # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.6 (Ubuntu 22.04) (64-bit (x86))
+            "us-east-1": "ami-0fcdcdcc9cf0407ae",  # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.6 (Ubuntu 22.04) (64-bit (x86))
+            "us-west-2": "ami-067cc81f948e50e06" # Deep Learning OSS Nvidia Driver AMI GPU PyTorch 2.7 (Ubuntu 22.04) (64-bit (x86))
         })
 
         # Create launch template
